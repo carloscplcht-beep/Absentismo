@@ -1,4 +1,5 @@
 node_modules/
 dist/
 dev-server.log
+rh-cobertura-ausencias-dashboard-source.zip
 .DS_Store
