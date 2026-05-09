@@ -95,7 +95,7 @@ export function ExecutiveReport({ parsed, metrics, filters, topCategorias, topNo
             <p>{intelligence.narrative}</p>
             <ul>
               <li>Tendencia detectada: {intelligence.absenceTrend.direction} ({formatPercent(intelligence.absenceTrend.variation)}).</li>
-              <li>Previsión central de cierre: {formatNumber(intelligence.forecast.central.diasAusenciaHastaFinP)} días de ausencia y {formatCurrency(intelligence.forecast.central.totalNomina)}.</li>
+              <li>Previsión central de cierre{intelligence.forecast.targetYear ? ` ${intelligence.forecast.targetYear}` : ""}: {formatNumber(intelligence.forecast.central.diasAusenciaHastaFinP)} días de ausencia y {formatCurrency(intelligence.forecast.central.totalNomina)}.</li>
               <li>Método de previsión: {intelligence.forecast.method}, calidad {intelligence.forecast.quality.toLowerCase()}.</li>
               <li>Alertas principales: {intelligence.alerts.slice(0, 3).map((item) => item.title).join(", ") || "sin alertas activas"}.</li>
               <li>Top 5 de impacto gestor: {intelligence.impactRows.slice(0, 5).map((item) => item.label).join(", ") || "sin datos suficientes"}.</li>

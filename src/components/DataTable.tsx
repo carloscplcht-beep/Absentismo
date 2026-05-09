@@ -10,7 +10,7 @@ type DataTableProps = {
 
 type SortKey = keyof NormalizedRecord;
 
-const columns: Array<{ key: SortKey; label: string; type?: "date" | "number" | "currency" | "percent" | "dni" }> = [
+const columns: Array<{ key: SortKey; label: string; type?: "date" | "number" | "currency" | "percent" | "dni" | "text" }> = [
   { key: "ambito", label: "Ámbito" },
   { key: "anio", label: "Año" },
   { key: "titular", label: "Titular" },
@@ -113,7 +113,7 @@ export function DataTable({ records }: DataTableProps) {
           <thead>
             <tr>
               {columns.map((column) => (
-                <th key={column.key}>
+                <th key={column.key} data-type={column.type ?? "text"}>
                   <button type="button" onClick={() => setSort((current) => ({
                     key: column.key,
                     direction: current.key === column.key && current.direction === "desc" ? "asc" : "desc"
@@ -128,7 +128,9 @@ export function DataTable({ records }: DataTableProps) {
             {pageRows.map((record) => (
               <tr key={record.id}>
                 {columns.map((column) => (
-                  <td key={column.key}>{printable(record, column.key, showSensitive)}</td>
+                  <td key={column.key} data-type={column.type ?? "text"} title={printable(record, column.key, showSensitive)}>
+                    {printable(record, column.key, showSensitive)}
+                  </td>
                 ))}
               </tr>
             ))}

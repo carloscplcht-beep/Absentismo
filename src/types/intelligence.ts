@@ -46,6 +46,7 @@ export type ForecastPoint = {
 export type ForecastResult = {
   method: ForecastMethod;
   quality: ForecastQuality;
+  targetYear: number | null;
   monthsWithData: number;
   lastMonthLabel: string;
   accumulated: Metrics;

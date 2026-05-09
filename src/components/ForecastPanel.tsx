@@ -9,6 +9,7 @@ const tooltip = {
 };
 
 export function ForecastPanel({ forecast }: { forecast: ForecastResult }) {
+  const yearText = forecast.targetYear ? ` ${forecast.targetYear}` : "";
   const scenarioData = forecast.scenarios.map((scenario) => ({
     name: scenario.label,
     diasAusencia: scenario.metrics.diasAusenciaHastaFinP,
@@ -23,7 +24,7 @@ export function ForecastPanel({ forecast }: { forecast: ForecastResult }) {
     <section className="content-stack">
       <div className="section-title-row">
         <div>
-          <span>Prevision de cierre anual</span>
+          <span>Prevision de cierre anual{yearText}</span>
           <h2>Escenario central y sensibilidad</h2>
         </div>
         <span className="status-pill status-pill--good">{forecast.method}</span>
@@ -31,28 +32,28 @@ export function ForecastPanel({ forecast }: { forecast: ForecastResult }) {
       <ForecastScenarioCards forecast={forecast} />
       {forecast.warnings.map((warning) => <div className="info-banner" key={warning}>{warning}</div>)}
       <div className="charts-grid">
-        <ChartCard title="Acumulado y escenarios" subtitle="Bajo -10%, central calculado, alto +10%">
-          <ResponsiveContainer width="100%" height={320}>
+        <ChartCard title={`Acumulado${yearText} y escenarios`} subtitle="Bajo -10%, central calculado, alto +10%">
+          <ResponsiveContainer width="100%" height={340}>
             <ComposedChart data={annualData}>
               <CartesianGrid stroke="#E2E8F0" strokeDasharray="3 3" />
-              <XAxis dataKey="name" />
+              <XAxis dataKey="name" height={44} />
               <YAxis yAxisId="days" />
               <YAxis yAxisId="cost" orientation="right" tickFormatter={(value) => formatCurrency(Number(value), true)} />
               <Tooltip {...tooltip} formatter={(value, name) => String(name).includes("coste") ? formatCurrency(Number(value), true) : formatNumber(Number(value))} />
-              <Legend />
+              <Legend wrapperStyle={{ fontSize: 12, paddingTop: 8 }} />
               <Bar yAxisId="days" dataKey="diasAusencia" name="Dias ausencia" fill="#007A53" radius={[8, 8, 0, 0]} />
               <Line yAxisId="cost" dataKey="coste" name="Coste" stroke="#155E75" strokeWidth={3} />
             </ComposedChart>
           </ResponsiveContainer>
         </ChartCard>
         <ChartCard title="Datos reales y proyeccion a diciembre" subtitle="La parte proyectada se muestra con trazo discontinuo">
-          <ResponsiveContainer width="100%" height={320}>
+          <ResponsiveContainer width="100%" height={340}>
             <ComposedChart data={forecast.projectedSeries}>
               <CartesianGrid stroke="#E2E8F0" strokeDasharray="3 3" />
-              <XAxis dataKey="label" />
+              <XAxis dataKey="label" height={50} tick={{ fontSize: 11 }} />
               <YAxis />
               <Tooltip {...tooltip} formatter={(value) => formatNumber(Number(value), 1)} />
-              <Legend />
+              <Legend wrapperStyle={{ fontSize: 12, paddingTop: 8 }} />
               <Bar dataKey="diasAusencia" name="Dias ausencia" fill="#14B8A6" radius={[8, 8, 0, 0]} />
               <Line dataKey="diasAusencia" name="Real/proyectado" stroke="#007A53" strokeWidth={3} strokeDasharray="6 4" />
             </ComposedChart>

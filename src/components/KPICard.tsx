@@ -14,14 +14,14 @@ export function KPICard({ label, value, detail, tone = "neutral", icon, trend }:
   return (
     <article className={`kpi-card kpi-card--${tone}`}>
       <div className="kpi-card__top">
-        <span className="kpi-card__label">{label}</span>
+        <span className="kpi-card__label" title={label}>{label}</span>
         {icon ? <span className="kpi-card__icon">{icon}</span> : null}
       </div>
-      <strong>{value}</strong>
+      <strong title={value}>{value}</strong>
       <div className="kpi-card__detail">
         {trend === "up" ? <ArrowUpRight size={15} /> : null}
         {trend === "down" ? <ArrowDownRight size={15} /> : null}
-        <span>{detail ?? " "}</span>
+        <span title={detail}>{detail ?? " "}</span>
       </div>
     </article>
   );

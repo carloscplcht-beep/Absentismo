@@ -37,20 +37,24 @@ function MultiSelect({
   options: string[];
   onChange: (value: string[]) => void;
 }) {
+  const summary = value.length ? `${value.length} seleccionado${value.length === 1 ? "" : "s"}` : "Todos";
+  const title = value.length ? value.join(", ") : `Todos los valores de ${label}`;
   return (
     <label className="field">
       <span>{label}</span>
       <select
         multiple
+        title={title}
         value={value}
         onChange={(event) => onChange(Array.from(event.currentTarget.selectedOptions).map((option) => option.value))}
       >
         {options.map((option) => (
-          <option key={option} value={option}>
+          <option key={option} value={option} title={option}>
             {option}
           </option>
         ))}
       </select>
+      <small className="field-summary" title={title}>{summary}</small>
     </label>
   );
 }

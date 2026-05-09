@@ -113,6 +113,7 @@ export const calculateForecast = (records: NormalizedRecord[]): ForecastResult =
     return {
       method: "Proyeccion lineal simple",
       quality: "Baja",
+      targetYear: null,
       monthsWithData: 0,
       lastMonthLabel: "No calculable",
       accumulated: empty,
@@ -163,6 +164,7 @@ export const calculateForecast = (records: NormalizedRecord[]): ForecastResult =
   return {
     method,
     quality: qualityFor(series.length),
+    targetYear: latest.year,
     monthsWithData: series.length,
     lastMonthLabel: latest.label,
     accumulated,

@@ -11,6 +11,10 @@ const tooltip = {
 };
 
 const dimensions = Object.keys(dimensionLabels) as ImpactDimension[];
+const shortLabel = (value: unknown, max = 26) => {
+  const text = String(value ?? "");
+  return text.length > max ? `${text.slice(0, max - 1)}…` : text;
+};
 
 export function ImpactRanking({ records }: { records: NormalizedRecord[] }) {
   const [dimension, setDimension] = useState<ImpactDimension>("categoriaCentralizada");
@@ -31,10 +35,10 @@ export function ImpactRanking({ records }: { records: NormalizedRecord[] }) {
       <div className="charts-grid">
         <ChartCard title="Top 10 indice de impacto gestor">
           <ResponsiveContainer width="100%" height={330}>
-            <BarChart data={top.map((row) => ({ name: row.label, value: row.index }))} layout="vertical" margin={{ left: 130, right: 20 }}>
+            <BarChart data={top.map((row) => ({ name: row.label, value: row.index }))} layout="vertical" margin={{ left: 158, right: 24, top: 12, bottom: 12 }}>
               <CartesianGrid stroke="#E2E8F0" strokeDasharray="3 3" horizontal={false} />
               <XAxis type="number" domain={[0, 100]} />
-              <YAxis dataKey="name" type="category" width={126} tick={{ fontSize: 11 }} />
+              <YAxis dataKey="name" type="category" width={150} tick={{ fontSize: 11 }} tickFormatter={(value) => shortLabel(value)} />
               <Tooltip {...tooltip} formatter={(value) => formatNumber(Number(value), 1)} />
               <Bar dataKey="value" fill="#007A53" radius={[0, 8, 8, 0]} />
             </BarChart>
@@ -59,20 +63,20 @@ export function ImpactRanking({ records }: { records: NormalizedRecord[] }) {
           <table>
             <thead>
               <tr>
-                <th>Grupo</th><th>Indice</th><th>Dias ausencia</th><th>Dias no sustituidos</th><th>Cobertura</th><th>Coste</th><th>Coste/dia sust.</th><th>Componentes</th>
+                <th>Grupo</th><th data-type="number">Indice</th><th data-type="number">Dias ausencia</th><th data-type="number">Dias no sustituidos</th><th data-type="percent">Cobertura</th><th data-type="currency">Coste</th><th data-type="currency">Coste/dia sust.</th><th data-type="number">Componentes</th>
               </tr>
             </thead>
             <tbody>
               {top.map((row) => (
                 <tr key={row.key}>
-                  <td>{row.label}</td>
-                  <td>{formatNumber(row.index, 1)}</td>
-                  <td>{formatNumber(row.diasAusencia)}</td>
-                  <td>{formatNumber(row.diasNoSustituidos)}</td>
-                  <td>{formatPercent(row.porcentajeSustitucion)}</td>
-                  <td>{formatCurrency(row.totalNomina, true)}</td>
-                  <td>{formatCurrency(row.costeDiaSustituido)}</td>
-                  <td>{formatNumber(row.components.diasAusencia, 0)} / {formatNumber(row.components.diasNoSustituidos, 0)} / {formatNumber(row.components.costeTotal, 0)} / {formatNumber(row.components.bajaCobertura, 0)}</td>
+                  <td title={row.label}>{row.label}</td>
+                  <td data-type="number">{formatNumber(row.index, 1)}</td>
+                  <td data-type="number">{formatNumber(row.diasAusencia)}</td>
+                  <td data-type="number">{formatNumber(row.diasNoSustituidos)}</td>
+                  <td data-type="percent">{formatPercent(row.porcentajeSustitucion)}</td>
+                  <td data-type="currency" title={formatCurrency(row.totalNomina)}>{formatCurrency(row.totalNomina, true)}</td>
+                  <td data-type="currency">{formatCurrency(row.costeDiaSustituido)}</td>
+                  <td data-type="number">{formatNumber(row.components.diasAusencia, 0)} / {formatNumber(row.components.diasNoSustituidos, 0)} / {formatNumber(row.components.costeTotal, 0)} / {formatNumber(row.components.bajaCobertura, 0)}</td>
                 </tr>
               ))}
             </tbody>

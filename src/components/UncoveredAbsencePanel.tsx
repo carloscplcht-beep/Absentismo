@@ -28,14 +28,16 @@ export function UncoveredAbsencePanel({ uncovered }: { uncovered: UncoveredSumma
             <h3>{title}</h3>
             <div className="table-wrap">
               <table>
-                <thead><tr><th>Grupo</th><th>Dias no sust.</th><th>Cobertura</th><th>Coste teorico</th></tr></thead>
+                <thead><tr><th>Grupo</th><th data-type="number">Dias no sust.</th><th data-type="percent">Cobertura</th><th data-type="currency">Coste teorico</th></tr></thead>
                 <tbody>
                   {rows.slice(0, 5).map((row) => (
                     <tr key={row.key}>
-                      <td>{row.label}</td>
-                      <td>{formatNumber(row.diasNoSustituidos)}</td>
-                      <td>{formatPercent(row.porcentajeSustitucion)}</td>
-                      <td>{formatCurrency(row.diasNoSustituidos * uncovered.metrics.costeMedioDiaSustituido, true)}</td>
+                      <td title={row.label}>{row.label}</td>
+                      <td data-type="number">{formatNumber(row.diasNoSustituidos)}</td>
+                      <td data-type="percent">{formatPercent(row.porcentajeSustitucion)}</td>
+                      <td data-type="currency" title={formatCurrency(row.diasNoSustituidos * uncovered.metrics.costeMedioDiaSustituido)}>
+                        {formatCurrency(row.diasNoSustituidos * uncovered.metrics.costeMedioDiaSustituido, true)}
+                      </td>
                     </tr>
                   ))}
                 </tbody>

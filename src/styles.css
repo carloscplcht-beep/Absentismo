@@ -311,7 +311,24 @@ button:disabled {
 }
 
 .field select[multiple] {
-  min-height: 88px;
+  min-height: 76px;
+  max-height: 96px;
+}
+
+.field select,
+.field option {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.field-summary {
+  min-height: 16px;
+  color: var(--muted);
+  font-size: 0.76rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .field select:focus,
@@ -415,6 +432,7 @@ button:disabled {
   display: flex;
   justify-content: space-between;
   gap: 10px;
+  min-width: 0;
 }
 
 .kpi-card__icon {
@@ -431,8 +449,9 @@ button:disabled {
   display: block;
   margin-top: 8px;
   color: #102a25;
-  font-size: clamp(1.28rem, 2.1vw, 2rem);
+  font-size: clamp(1.18rem, 1.8vw, 1.82rem);
   line-height: 1.1;
+  overflow-wrap: anywhere;
 }
 
 .kpi-card__detail {
@@ -442,6 +461,14 @@ button:disabled {
   gap: 4px;
   color: var(--muted);
   font-size: 0.86rem;
+  min-width: 0;
+}
+
+.kpi-card__label,
+.kpi-card__detail span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .charts-grid {
@@ -469,7 +496,8 @@ button:disabled {
 }
 
 .chart-card__body {
-  padding: 12px 12px 16px;
+  padding: 12px 14px 18px;
+  min-width: 0;
 }
 
 .gauge-value {
@@ -502,6 +530,7 @@ button:disabled {
   padding: 16px;
   display: grid;
   gap: 10px;
+  min-width: 0;
 }
 
 .alert-card--bad { border-left: 4px solid var(--danger); }
@@ -560,6 +589,7 @@ button:disabled {
 .recommendation-card dd {
   margin: 2px 0 0;
   color: var(--ink);
+  overflow-wrap: anywhere;
 }
 
 .scenario-controls {
@@ -596,6 +626,7 @@ button:disabled {
   overflow: auto;
   border: 1px solid var(--line);
   border-radius: 8px;
+  scrollbar-color: var(--line-strong) transparent;
 }
 
 table {
@@ -631,6 +662,30 @@ td {
   border-bottom: 1px solid var(--line);
   vertical-align: top;
   white-space: nowrap;
+  max-width: 280px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+td[data-type="number"],
+td[data-type="currency"],
+td[data-type="percent"],
+td[data-type="date"] {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+th[data-type="number"],
+th[data-type="currency"],
+th[data-type="percent"],
+th[data-type="date"] {
+  text-align: right;
+}
+
+th:first-child,
+td:first-child {
+  text-align: left;
+  max-width: 340px;
 }
 
 tbody tr:nth-child(even) {
@@ -807,6 +862,13 @@ tbody tr:nth-child(even) {
   gap: 22px;
 }
 
+.report-document section,
+.report-meta div,
+.report-kpis div {
+  break-inside: avoid;
+  page-break-inside: avoid;
+}
+
 .report-document header {
   display: flex;
   align-items: center;
@@ -958,8 +1020,16 @@ tbody tr:nth-child(even) {
     padding: 0;
   }
 
+  .report-document section,
+  .report-document header,
+  .report-meta,
+  .report-kpis {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+
   @page {
     size: A4;
-    margin: 14mm;
+    margin: 12mm;
   }
 }

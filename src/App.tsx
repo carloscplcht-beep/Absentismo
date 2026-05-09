@@ -37,6 +37,10 @@ import { IntelligencePage } from "./components/IntelligencePage";
 import { buildIntelligence } from "./utils/intelligenceEngine";
 
 const COLORS = ["#007A53", "#0F766E", "#155E75", "#65A30D", "#F59E0B", "#DC2626", "#64748B", "#14B8A6"];
+const shortLabel = (value: unknown, max = 26) => {
+  const text = String(value ?? "");
+  return text.length > max ? `${text.slice(0, max - 1)}…` : text;
+};
 
 const chartTooltip = {
   contentStyle: { borderRadius: 12, border: "1px solid #D7E1DD", boxShadow: "0 16px 36px rgba(15, 23, 42, 0.12)" }
@@ -90,10 +94,10 @@ function CoverageGauge({ value }: { value: number }) {
 function BarListChart({ data, formatter = formatNumber }: { data: Array<{ name: string; value: number }>; formatter?: (value: number) => string }) {
   return (
     <ResponsiveContainer width="100%" height={320}>
-      <BarChart data={data} layout="vertical" margin={{ left: 120, right: 20, top: 10, bottom: 10 }}>
+      <BarChart data={data} layout="vertical" margin={{ left: 150, right: 24, top: 12, bottom: 12 }}>
         <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#E2E8F0" />
         <XAxis type="number" tickFormatter={(value) => formatter(Number(value))} />
-        <YAxis dataKey="name" type="category" width={118} tick={{ fontSize: 11 }} />
+        <YAxis dataKey="name" type="category" width={144} tick={{ fontSize: 11 }} tickFormatter={(value) => shortLabel(value)} />
         <Tooltip {...chartTooltip} formatter={(value) => formatter(Number(value))} />
         <Bar dataKey="value" fill="#007A53" radius={[0, 8, 8, 0]} />
       </BarChart>
@@ -307,14 +311,14 @@ function AggregateTable({ rows }: { rows: AggregateRow[] }) {
         <thead>
           <tr>
             <th>Grupo</th>
-            {headers.map(([key, label]) => <th key={key}><button type="button" onClick={() => setSortKey(key)}>{label}</button></th>)}
+            {headers.map(([key, label, type]) => <th key={key} data-type={type}><button type="button" onClick={() => setSortKey(key)}>{label}</button></th>)}
           </tr>
         </thead>
         <tbody>
           {sorted.map((row) => (
             <tr key={row.key}>
-              <td>{row.label}</td>
-              {headers.map(([key, , type]) => <td key={key}>{fmt(Number(row[key]), type)}</td>)}
+              <td title={row.label}>{row.label}</td>
+              {headers.map(([key, , type]) => <td key={key} data-type={type}>{fmt(Number(row[key]), type)}</td>)}
             </tr>
           ))}
         </tbody>
@@ -341,7 +345,7 @@ function CategoriesPage({ records }: { records: NormalizedRecord[] }) {
           <ResponsiveContainer width="100%" height={320}>
             <ComposedChart data={comparison}>
               <CartesianGrid stroke="#E2E8F0" strokeDasharray="3 3" />
-              <XAxis dataKey="name" tick={{ fontSize: 11 }} />
+              <XAxis dataKey="name" tick={{ fontSize: 10 }} tickFormatter={(value) => shortLabel(value, 14)} angle={-25} textAnchor="end" height={76} interval={0} />
               <YAxis />
               <Tooltip {...chartTooltip} />
               <Legend />
