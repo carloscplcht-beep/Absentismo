@@ -1,4 +1,6 @@
+import { useState } from "react";
 import type { AggregateRow, FilterState, Metrics, ParsedWorkbook } from "../types/data";
+import type { IntelligenceResult } from "../types/intelligence";
 import { formatCurrency, formatNumber, formatPercent } from "../utils/formatters";
 import { SESCAM_LOGO } from "../utils/brandAssets";
 
@@ -8,6 +10,7 @@ type ExecutiveReportProps = {
   filters: FilterState;
   topCategorias: AggregateRow[];
   topNoCubierto: AggregateRow[];
+  intelligence?: IntelligenceResult;
 };
 
 const filterText = (filters: FilterState) => {
@@ -15,7 +18,8 @@ const filterText = (filters: FilterState) => {
   return active.length ? active.map(([key, value]) => `${key}: ${Array.isArray(value) ? value.join(", ") : value}`).join(" · ") : "Sin filtros aplicados";
 };
 
-export function ExecutiveReport({ parsed, metrics, filters, topCategorias, topNoCubierto }: ExecutiveReportProps) {
+export function ExecutiveReport({ parsed, metrics, filters, topCategorias, topNoCubierto, intelligence }: ExecutiveReportProps) {
+  const [includeIntelligence, setIncludeIntelligence] = useState(true);
   const topNames = topCategorias.slice(0, 3).map((row) => row.label).join(", ") || "sin datos suficientes";
   const uncovered = topNoCubierto.slice(0, 3).map((row) => row.label).join(", ") || "sin datos suficientes";
   const recommendations = [
@@ -33,6 +37,12 @@ export function ExecutiveReport({ parsed, metrics, filters, topCategorias, topNo
   return (
     <section className="report-page">
       <div className="report-actions">
+        {intelligence ? (
+          <label className="toggle">
+            <input type="checkbox" checked={includeIntelligence} onChange={(event) => setIncludeIntelligence(event.target.checked)} />
+            Incluir inteligencia gestora
+          </label>
+        ) : null}
         <button className="primary-button" type="button" onClick={() => window.print()}>
           Imprimir / guardar PDF
         </button>
@@ -79,6 +89,27 @@ export function ExecutiveReport({ parsed, metrics, filters, topCategorias, topNo
             <li>Hay {formatNumber(metrics.ausenciasAbiertas)} ausencias abiertas, equivalentes al {formatPercent(metrics.porcentajeAusenciasAbiertas)} de los registros filtrados.</li>
           </ul>
         </section>
+        {intelligence && includeIntelligence ? (
+          <section className="report-intelligence">
+            <h3>Análisis inteligente</h3>
+            <p>{intelligence.narrative}</p>
+            <ul>
+              <li>Tendencia detectada: {intelligence.absenceTrend.direction} ({formatPercent(intelligence.absenceTrend.variation)}).</li>
+              <li>Previsión central de cierre: {formatNumber(intelligence.forecast.central.diasAusenciaHastaFinP)} días de ausencia y {formatCurrency(intelligence.forecast.central.totalNomina)}.</li>
+              <li>Método de previsión: {intelligence.forecast.method}, calidad {intelligence.forecast.quality.toLowerCase()}.</li>
+              <li>Alertas principales: {intelligence.alerts.slice(0, 3).map((item) => item.title).join(", ") || "sin alertas activas"}.</li>
+              <li>Top 5 de impacto gestor: {intelligence.impactRows.slice(0, 5).map((item) => item.label).join(", ") || "sin datos suficientes"}.</li>
+              <li>Días no sustituidos principales: {Object.values(intelligence.uncovered.rankings)[0]?.slice(0, 3).map((item) => item.label).join(", ") || "sin datos suficientes"}.</li>
+              <li>Escenario central: {formatNumber(intelligence.forecast.central.diasNoSustituidos)} días no sustituidos y cobertura prevista {formatPercent(intelligence.forecast.central.porcentajeSustitucionDias)}.</li>
+            </ul>
+            <h3>Recomendaciones gestoras</h3>
+            <ul>
+              {intelligence.recommendations.slice(0, 5).map((recommendation) => (
+                <li key={recommendation.id}>{recommendation.suggestedAction} Dato: {recommendation.evidence}</li>
+              ))}
+            </ul>
+          </section>
+        ) : null}
         <section>
           <h3>Recomendaciones gestoras automáticas</h3>
           <ul>

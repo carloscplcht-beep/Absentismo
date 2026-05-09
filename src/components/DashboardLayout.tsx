@@ -1,11 +1,12 @@
 import type { ReactNode } from "react";
-import { Activity, BarChart3, BriefcaseMedical, ClipboardList, FileText, Layers3, LineChart, Table2 } from "lucide-react";
+import { Activity, BarChart3, BriefcaseMedical, ClipboardList, FileText, Layers3, LineChart, Sparkles, Table2 } from "lucide-react";
 import type { ParsedWorkbook } from "../types/data";
 import { GAICR_LOGO, SESCAM_LOGO } from "../utils/brandAssets";
 import { FileUploader } from "./FileUploader";
 
 export const tabs = [
   { id: "resumen", label: "Resumen ejecutivo", icon: Activity },
+  { id: "inteligencia", label: "Inteligencia gestora", icon: Sparkles },
   { id: "absentismo", label: "Análisis de absentismo", icon: LineChart },
   { id: "cobertura", label: "Cobertura y sustitución", icon: BriefcaseMedical },
   { id: "costes", label: "Costes", icon: BarChart3 },

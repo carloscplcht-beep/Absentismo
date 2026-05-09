@@ -6,6 +6,14 @@ export default defineConfig({
   base: "./",
   build: {
     outDir: "dist",
-    sourcemap: false
+    sourcemap: false,
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          charts: ["recharts"],
+          excel: ["xlsx"]
+        }
+      }
+    }
   }
 });

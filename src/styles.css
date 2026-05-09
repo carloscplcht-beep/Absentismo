@@ -63,6 +63,9 @@ button:disabled {
 .error-panel,
 .validation-log,
 .report-document,
+.intelligence-hero,
+.alert-card,
+.recommendation-card,
 .info-banner {
   border: 1px solid var(--line);
   background: var(--surface);
@@ -323,6 +326,69 @@ button:disabled {
   gap: 16px;
 }
 
+.section-title-row {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.section-title-row span:first-child,
+.intelligence-hero span:first-child {
+  display: block;
+  color: var(--green-dark);
+  font-size: 0.76rem;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.section-title-row h2 {
+  margin: 4px 0 0;
+  color: #102a25;
+  font-size: clamp(1.35rem, 2vw, 2rem);
+}
+
+.section-title-row p {
+  margin: 6px 0 0;
+  color: var(--muted);
+}
+
+.section-title-row select {
+  min-height: 38px;
+  border: 1px solid var(--line-strong);
+  border-radius: 8px;
+  background: #ffffff;
+  color: var(--ink);
+  padding: 7px 10px;
+}
+
+.intelligence-hero {
+  display: grid;
+  grid-template-columns: 56px 1fr;
+  gap: 18px;
+  padding: 22px;
+  background: linear-gradient(135deg, #ffffff 0%, #f2fbf7 58%, #e8f4f3 100%);
+  border-left: 5px solid var(--green);
+}
+
+.intelligence-hero__icon {
+  width: 48px;
+  height: 48px;
+  display: grid;
+  place-items: center;
+  border-radius: 8px;
+  color: #ffffff;
+  background: var(--green);
+}
+
+.intelligence-hero p {
+  margin: 8px 0 14px;
+  max-width: 1180px;
+  color: #102a25;
+  font-size: 1.02rem;
+  line-height: 1.62;
+}
+
 .kpi-grid {
   display: grid;
   grid-template-columns: repeat(6, minmax(0, 1fr));
@@ -421,6 +487,108 @@ button:disabled {
   padding: 16px;
   display: grid;
   gap: 12px;
+}
+
+.alerts-grid,
+.recommendation-grid,
+.uncovered-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.alert-card,
+.recommendation-card {
+  padding: 16px;
+  display: grid;
+  gap: 10px;
+}
+
+.alert-card--bad { border-left: 4px solid var(--danger); }
+.alert-card--warn { border-left: 4px solid var(--warn); }
+.alert-card--good { border-left: 4px solid var(--green); }
+
+.alert-card__head {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+}
+
+.alert-card__head svg {
+  color: var(--green-dark);
+  flex: 0 0 auto;
+}
+
+.alert-card__head strong,
+.recommendation-card h3 {
+  display: block;
+  margin: 0;
+  color: #102a25;
+  font-size: 1rem;
+}
+
+.alert-card__head span {
+  display: block;
+  margin-top: 3px;
+  color: var(--muted);
+  font-size: 0.82rem;
+}
+
+.alert-card p,
+.recommendation-card p {
+  margin: 0;
+  color: var(--ink);
+  line-height: 1.48;
+}
+
+.alert-card dl,
+.recommendation-card dl {
+  margin: 0;
+  display: grid;
+  gap: 6px;
+}
+
+.alert-card dt,
+.recommendation-card dt {
+  color: var(--muted);
+  font-size: 0.72rem;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.alert-card dd,
+.recommendation-card dd {
+  margin: 2px 0 0;
+  color: var(--ink);
+}
+
+.scenario-controls {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.scenario-controls label {
+  display: grid;
+  gap: 8px;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface-soft);
+  font-weight: 700;
+  color: var(--ink);
+}
+
+.scenario-controls input[type="range"] {
+  accent-color: var(--green);
+  width: 100%;
+}
+
+.methodology-note ul {
+  margin: 0;
+  padding-left: 18px;
+  color: var(--muted);
+  line-height: 1.55;
 }
 
 .table-wrap {
@@ -626,6 +794,8 @@ tbody tr:nth-child(even) {
 .report-actions {
   display: flex;
   justify-content: flex-end;
+  gap: 12px;
+  align-items: center;
 }
 
 .report-document {
@@ -718,6 +888,7 @@ tbody tr:nth-child(even) {
   .filter-panel__head,
   .table-toolbar,
   .pagination,
+  .section-title-row,
   .report-document header {
     flex-direction: column;
     align-items: stretch;
@@ -734,6 +905,11 @@ tbody tr:nth-child(even) {
   .kpi-grid--compact,
   .filters-grid,
   .charts-grid,
+  .alerts-grid,
+  .recommendation-grid,
+  .uncovered-grid,
+  .scenario-controls,
+  .intelligence-hero,
   .empty-state {
     grid-template-columns: 1fr;
   }

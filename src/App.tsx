@@ -33,6 +33,8 @@ import { KPICard } from "./components/KPICard";
 import { ChartCard } from "./components/ChartCard";
 import { DataTable } from "./components/DataTable";
 import { ExecutiveReport } from "./components/ExecutiveReport";
+import { IntelligencePage } from "./components/IntelligencePage";
+import { buildIntelligence } from "./utils/intelligenceEngine";
 
 const COLORS = ["#007A53", "#0F766E", "#155E75", "#65A30D", "#F59E0B", "#DC2626", "#64748B", "#14B8A6"];
 
@@ -399,6 +401,7 @@ export default function App() {
 
   const filteredRecords = useMemo(() => (parsed ? applyFilters(parsed.records, filters) : []), [parsed, filters]);
   const metrics = useMemo(() => calculateMetrics(filteredRecords), [filteredRecords]);
+  const intelligence = useMemo(() => (parsed ? buildIntelligence(filteredRecords, parsed, filters) : null), [filteredRecords, parsed, filters]);
   const topCategorias = useMemo(() => aggregateBy(filteredRecords, (record) => record.categoriaCentralizada), [filteredRecords]);
   const topNoCubierto = useMemo(() => topN(topCategorias, (row) => row.diasNoSustituidos, 10), [topCategorias]);
   const filterSummary = parsed
@@ -450,17 +453,18 @@ export default function App() {
           <ErrorPanel messages={[...parsed.warnings, ...(error ? [error] : [])]} />
           <FilterPanel records={parsed.records} filters={filters} onApply={setFilters} onClear={() => setFilters(emptyFilters)} onExport={exportView} />
           {activeTab === "resumen" ? <SummaryPage records={filteredRecords} metrics={metrics} /> : null}
+          {activeTab === "inteligencia" && intelligence ? <IntelligencePage records={filteredRecords} intelligence={intelligence} /> : null}
           {activeTab === "absentismo" ? <AbsencePage records={filteredRecords} metrics={metrics} /> : null}
           {activeTab === "cobertura" ? <CoveragePage records={filteredRecords} metrics={metrics} /> : null}
           {activeTab === "costes" ? <CostsPage records={filteredRecords} metrics={metrics} /> : null}
           {activeTab === "categorias" ? <CategoriesPage records={filteredRecords} /> : null}
           {activeTab === "ambitos" ? <UnitsPage records={filteredRecords} parsed={parsed} /> : null}
           {activeTab === "detalle" ? <main className="content-stack"><DataTable records={filteredRecords} /></main> : null}
-          {activeTab === "informe" ? <ExecutiveReport parsed={parsed} metrics={metrics} filters={filters} topCategorias={topCategorias} topNoCubierto={topNoCubierto} /> : null}
+          {activeTab === "informe" ? <ExecutiveReport parsed={parsed} metrics={metrics} filters={filters} topCategorias={topCategorias} topNoCubierto={topNoCubierto} intelligence={intelligence ?? undefined} /> : null}
           <section className="validation-log">
             <strong>Validación interna</strong>
             <span>{parsed.logs.join(" · ")} · Columnas dinámicas: {parsed.dynamicDimensions.length ? parsed.dynamicDimensions.join(", ") : "no detectadas"}</span>
-            <span className="formula-note">Impacto gestor = 35% días ausencia + 35% días no sustituidos + 20% coste total + 10% baja cobertura.</span>
+            <span className="formula-note">Impacto gestor v1.5 = 35% días ausencia + 25% días no sustituidos + 25% coste total + 15% baja cobertura.</span>
             <span className="formula-note">Cabecera normalizada automáticamente: {normalizeHeader(parsed.columns.slice(0, 4).join(" | "))}</span>
           </section>
         </>
