@@ -1,5 +1,15 @@
 import type { ColumnKey, NormalizedRecord, RawRecord } from "../types/data";
 
+export type DateNormalizationDiagnostics = {
+  ausInicioYears: Map<number, number>;
+  ausFinYears: Map<number, number>;
+  anioYears: Map<number, number>;
+  periodoYears: Map<number, number>;
+  discardedOutOfRange: number;
+  minYear: number;
+  maxYear: number;
+};
+
 export const CRITICAL_COLUMNS: ColumnKey[] = [
   "ambito",
   "categoriaCentralizada",
@@ -137,6 +147,33 @@ export const dynamicDimensionColumns = (headers: string[]) => {
 
 export const getText = (value: unknown) => String(value ?? "").trim();
 
+const currentYear = new Date().getFullYear();
+const defaultMinYear = 2020;
+const defaultMaxYear = currentYear + 2;
+
+const incrementYear = (target: Map<number, number>, year: number | null) => {
+  if (year && Number.isFinite(year)) target.set(year, (target.get(year) ?? 0) + 1);
+};
+
+const yearsFromText = (value: unknown) =>
+  Array.from(String(value ?? "").matchAll(/\b(19\d{2}|20\d{2}|21\d{2})\b/g)).map((match) => Number(match[1]));
+
+const createDateDiagnostics = (): DateNormalizationDiagnostics => ({
+  ausInicioYears: new Map(),
+  ausFinYears: new Map(),
+  anioYears: new Map(),
+  periodoYears: new Map(),
+  discardedOutOfRange: 0,
+  minYear: defaultMinYear,
+  maxYear: defaultMaxYear
+});
+
+export const formatYearDiagnostics = (values: Map<number, number>) =>
+  Array.from(values.entries())
+    .sort((a, b) => a[0] - b[0])
+    .map(([year, count]) => `${year}:${count}`)
+    .join(", ") || "sin datos";
+
 export const isEmptyLike = (value: unknown) => {
   const text = normalizeHeader(value);
   return !text || text === "NO APLICA" || text === "NO EXISTE" || text === "SIN DATOS";
@@ -176,12 +213,39 @@ const toNumberOrFallback = (value: unknown, fallback: number) => {
   return toNumber(value);
 };
 
-export const toDate = (value: unknown) => {
-  if (value instanceof Date && !Number.isNaN(value.getTime())) return value;
-  if (typeof value === "number" && value > 0) {
+const isWithinDateBounds = (date: Date, minYear: number, maxYear: number) =>
+  date.getFullYear() >= minYear && date.getFullYear() <= maxYear;
+
+const rawDateYear = (value: unknown) => {
+  const date = toDate(value, { enforceRange: false, allowExcelSerial: true });
+  return date ? date.getFullYear() : null;
+};
+
+type DateParseOptions = {
+  minYear?: number;
+  maxYear?: number;
+  allowExcelSerial?: boolean;
+  enforceRange?: boolean;
+  diagnostics?: DateNormalizationDiagnostics;
+};
+
+export const toDate = (value: unknown, options: DateParseOptions = {}) => {
+  const minYear = options.minYear ?? defaultMinYear;
+  const maxYear = options.maxYear ?? defaultMaxYear;
+  const enforceRange = options.enforceRange ?? true;
+  const finish = (date: Date | null) => {
+    if (!date || Number.isNaN(date.getTime())) return null;
+    if (enforceRange && !isWithinDateBounds(date, minYear, maxYear)) {
+      if (options.diagnostics) options.diagnostics.discardedOutOfRange += 1;
+      return null;
+    }
+    return date;
+  };
+  if (value instanceof Date && !Number.isNaN(value.getTime())) return finish(value);
+  if (typeof value === "number" && value > 0 && options.allowExcelSerial) {
     const epoch = Date.UTC(1899, 11, 30);
     const date = new Date(epoch + value * 86400000);
-    return Number.isNaN(date.getTime()) ? null : date;
+    return finish(date);
   }
   const text = String(value ?? "").trim();
   if (!text || normalizeHeader(text) === "NO APLICA") return null;
@@ -190,20 +254,46 @@ export const toDate = (value: unknown) => {
     const [, d, m, y, h = "0", min = "0"] = match;
     const year = y.length === 2 ? Number(`20${y}`) : Number(y);
     const date = new Date(year, Number(m) - 1, Number(d), Number(h), Number(min));
-    return Number.isNaN(date.getTime()) ? null : date;
+    return finish(date);
   }
   const parsed = new Date(text);
-  return Number.isNaN(parsed.getTime()) ? null : parsed;
+  return finish(parsed);
 };
 
 const get = (row: RawRecord, map: Partial<Record<ColumnKey, string>>, key: ColumnKey) =>
   map[key] ? row[map[key]!] : undefined;
 
-export const normalizeRecords = (
+const inferDateDiagnostics = (
   rows: RawRecord[],
   columnMap: Partial<Record<ColumnKey, string>>
-): NormalizedRecord[] =>
-  rows
+): DateNormalizationDiagnostics => {
+  const diagnostics = createDateDiagnostics();
+  rows.forEach((row) => {
+    incrementYear(diagnostics.ausInicioYears, rawDateYear(get(row, columnMap, "ausInicio")));
+    incrementYear(diagnostics.ausFinYears, rawDateYear(get(row, columnMap, "ausFin")));
+    yearsFromText(get(row, columnMap, "anio")).forEach((year) => incrementYear(diagnostics.anioYears, year));
+    yearsFromText(get(row, columnMap, "periodo")).forEach((year) => incrementYear(diagnostics.periodoYears, year));
+  });
+  const periodoYears = Array.from(diagnostics.periodoYears.keys()).filter((year) => year >= defaultMinYear);
+  const anioYears = Array.from(diagnostics.anioYears.keys()).filter((year) => year >= defaultMinYear);
+  const referenceYears = periodoYears.length ? periodoYears : anioYears;
+  diagnostics.minYear = defaultMinYear;
+  diagnostics.maxYear = referenceYears.length ? Math.min(defaultMaxYear, Math.max(...referenceYears) + 2) : defaultMaxYear;
+  return diagnostics;
+};
+
+export const normalizeRecords = (
+  rows: RawRecord[],
+  columnMap: Partial<Record<ColumnKey, string>>,
+  diagnostics = inferDateDiagnostics(rows, columnMap)
+): NormalizedRecord[] => {
+  const parseDate = (value: unknown) => toDate(value, {
+    minYear: diagnostics.minYear,
+    maxYear: diagnostics.maxYear,
+    allowExcelSerial: true,
+    diagnostics
+  });
+  return rows
     .map((row, index) => {
       const diasAus = toNumber(get(row, columnMap, "diasAus"));
       const diasAusHastaFinP = toNumberOrFallback(get(row, columnMap, "diasAusHastaFinP"), diasAus);
@@ -213,8 +303,8 @@ export const normalizeRecords = (
         diasSustituidos
       );
       const suplente = getText(get(row, columnMap, "suplente"));
-      const ausFin = toDate(get(row, columnMap, "ausFin"));
-      const ausInicio = toDate(get(row, columnMap, "ausInicio"));
+      const ausFin = parseDate(get(row, columnMap, "ausFin"));
+      const ausInicio = parseDate(get(row, columnMap, "ausInicio"));
       const anio = getText(get(row, columnMap, "anio")) || (ausInicio ? String(ausInicio.getFullYear()) : "Sin año");
       const normalized: NormalizedRecord = {
         id: `r-${index + 1}`,
@@ -242,8 +332,8 @@ export const normalizeRecords = (
         suplente,
         dniSuplente: getText(get(row, columnMap, "dniSuplente")),
         dniSuplenteUnico: getText(get(row, columnMap, "dniSuplenteUnico")),
-        inicioSuplencia: toDate(get(row, columnMap, "inicioSuplencia")),
-        finSuplencia: toDate(get(row, columnMap, "finSuplencia")),
+        inicioSuplencia: parseDate(get(row, columnMap, "inicioSuplencia")),
+        finSuplencia: parseDate(get(row, columnMap, "finSuplencia")),
         diasSustituidos,
         diasSustituidosHastaFinP,
         provisionSubtipo: getText(get(row, columnMap, "provisionSubtipo")) || "No aplica",
@@ -259,6 +349,9 @@ export const normalizeRecords = (
       return normalized;
     })
     .filter((record) => Object.values(record.raw).some((value) => !isEmptyLike(value)));
+};
+
+export const createDateNormalizationDiagnostics = inferDateDiagnostics;
 
 export const missingCriticalColumns = (columnMap: Partial<Record<ColumnKey, string>>) =>
   CRITICAL_COLUMNS.filter((key) => !columnMap[key]).map((key) => COLUMN_LABELS[key]);

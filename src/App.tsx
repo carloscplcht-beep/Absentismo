@@ -21,7 +21,7 @@ import {
 import { BadgeEuro, CalendarClock, CircleAlert, Euro, FileText, HeartPulse, ShieldCheck, UserRoundCheck, UsersRound } from "lucide-react";
 import type { AggregateRow, FilterState, NormalizedRecord, ParsedWorkbook } from "./types/data";
 import { parseExcelFile } from "./utils/excelParser";
-import { aggregateBy, applyFilters, durationBuckets, emptyFilters, topN } from "./utils/aggregations";
+import { aggregateBy, applyFilters, durationBuckets, emptyFilters, getActiveYearOptions, topN } from "./utils/aggregations";
 import { calculateMetrics, median } from "./utils/metricsCalculator";
 import { coverageStatus, downloadCsv, formatCurrency, formatNumber, formatPercent } from "./utils/formatters";
 import { normalizeHeader } from "./utils/dataNormalizer";
@@ -106,7 +106,13 @@ function BarListChart({ data, formatter = formatNumber }: { data: Array<{ name: 
 }
 
 function SummaryPage({ records, metrics }: { records: NormalizedRecord[]; metrics: ReturnType<typeof calculateMetrics> }) {
-  const byYear = toChart(aggregateBy(records, (record) => record.anio), "diasAusencia", 12);
+  const byYear = getActiveYearOptions(records).map((year) => ({
+    name: year,
+    value: calculateMetrics(applyFilters(records, { ...emptyFilters, anio: [year] })).diasAusenciaHastaFinP,
+    cobertura: 0,
+    coste: 0,
+    dias: 0
+  }));
   const byAmbito = toChart(aggregateBy(records, (record) => record.ambito), "registros", 8);
   const byTipo = toChart(aggregateBy(records, (record) => record.tipoAusencia), "registros", 8);
   const byCategory = aggregateBy(records, (record) => record.categoriaCentralizada);

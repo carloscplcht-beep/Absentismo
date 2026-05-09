@@ -2,8 +2,10 @@ import * as XLSX from "xlsx";
 import type { ParsedWorkbook, RawRecord, WorkbookMetadata } from "../types/data";
 import {
   buildColumnMap,
+  createDateNormalizationDiagnostics,
   detectHeaderRow,
   dynamicDimensionColumns,
+  formatYearDiagnostics,
   missingCriticalColumns,
   normalizeHeader,
   normalizeRecords
@@ -56,7 +58,8 @@ export const parseExcelFile = async (file: File): Promise<ParsedWorkbook> => {
     defval: "",
     raw: false
   });
-  const records = normalizeRecords(rawRows, columnMap);
+  const dateDiagnostics = createDateNormalizationDiagnostics(rawRows, columnMap);
+  const records = normalizeRecords(rawRows, columnMap, dateDiagnostics);
   const metadata = detectMetadata(aoa.slice(0, headerRowIndex), records, sheetName, file.name, headerRowIndex);
   const missing = missingCriticalColumns(columnMap);
   const warnings = [
@@ -73,7 +76,12 @@ export const parseExcelFile = async (file: File): Promise<ParsedWorkbook> => {
       `Hoja leída: ${sheetName}`,
       `Fila de encabezados detectada: ${headerRowIndex + 1}`,
       `Columnas detectadas: ${headers.filter(Boolean).length}`,
-      `Registros normalizados: ${records.length}`
+      `Registros normalizados: ${records.length}`,
+      `Años detectados en AUS. INICIO: ${formatYearDiagnostics(dateDiagnostics.ausInicioYears)}`,
+      `Años detectados en AUS. FIN: ${formatYearDiagnostics(dateDiagnostics.ausFinYears)}`,
+      `Años detectados en AÑO: ${formatYearDiagnostics(dateDiagnostics.anioYears)}`,
+      `Años detectados en PERIODO CONTEMPLADO: ${formatYearDiagnostics(dateDiagnostics.periodoYears)}`,
+      `Fechas descartadas fuera de rango lógico ${dateDiagnostics.minYear}-${dateDiagnostics.maxYear}: ${dateDiagnostics.discardedOutOfRange}`
     ],
     dynamicDimensions: dynamicDimensionColumns(headers)
   };

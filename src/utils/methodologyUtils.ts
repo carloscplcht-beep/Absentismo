@@ -22,6 +22,20 @@ export const parseYear = (value: string) => {
   return match ? Number(match[0]) : null;
 };
 
+const minTemporalYear = 2020;
+const maxTemporalYear = new Date().getFullYear() + 2;
+
+const isCoherentAnalysisDate = (date: Date | null, record: NormalizedRecord) => {
+  if (!date || Number.isNaN(date.getTime())) return false;
+  const year = date.getFullYear();
+  if (year < minTemporalYear || year > maxTemporalYear) return false;
+  const periodYear = parseYear(record.periodo);
+  return !periodYear || Math.abs(year - periodYear) <= 2;
+};
+
+const firstCoherentDate = (record: NormalizedRecord, dates: Array<Date | null>) =>
+  dates.find((date) => isCoherentAnalysisDate(date, record)) ?? yearFallback(record);
+
 const monthNames = new Map<string, number>(
   ([
     ["ENERO", 1],
@@ -64,9 +78,9 @@ export const parseMonthPaymentDate = (record: NormalizedRecord) => {
 
 export const dateForMonthlyAnalysis = (record: NormalizedRecord, mode: "absence" | "cost" | "coverage" = "absence") => {
   if (mode === "cost") {
-    return parseMonthPaymentDate(record) ?? record.inicioSuplencia ?? record.ausInicio ?? record.ausFin ?? yearFallback(record);
+    return firstCoherentDate(record, [parseMonthPaymentDate(record), record.inicioSuplencia, record.ausInicio, record.ausFin]);
   }
-  return record.ausInicio ?? record.ausFin ?? yearFallback(record);
+  return firstCoherentDate(record, [record.ausInicio, record.ausFin]);
 };
 
 export const yearFallback = (record: NormalizedRecord) => {

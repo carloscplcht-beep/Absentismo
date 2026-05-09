@@ -42,27 +42,97 @@ const yearFromDate = (value: Date | null | undefined) => {
   return value.getFullYear();
 };
 
-const datasetMaxYear = (records: NormalizedRecord[]) => {
-  const years = records.flatMap((record) => [
-    yearFromDate(record.ausInicio),
-    yearFromDate(record.ausFin),
-    yearFromText(record.anio),
-    yearFromText(record.periodo)
-  ]).filter((year): year is number => Number.isFinite(year));
-  return years.length ? Math.max(...years) : new Date().getFullYear();
+const dateMinYear = 2020;
+const dateMaxYear = new Date().getFullYear() + 2;
+
+const validYear = (year: number | null) => Boolean(year && year >= dateMinYear && year <= dateMaxYear);
+
+const yearsFromText = (value: string) =>
+  Array.from(String(value ?? "").matchAll(/\b(19\d{2}|20\d{2}|21\d{2})\b/g))
+    .map((match) => Number(match[1]))
+    .filter((year) => validYear(year));
+
+const monthNames = new Map<string, number>([
+  ["ENE", 1],
+  ["ENERO", 1],
+  ["FEB", 2],
+  ["FEBRERO", 2],
+  ["MAR", 3],
+  ["MARZO", 3],
+  ["ABR", 4],
+  ["ABRIL", 4],
+  ["MAY", 5],
+  ["MAYO", 5],
+  ["JUN", 6],
+  ["JUNIO", 6],
+  ["JUL", 7],
+  ["JULIO", 7],
+  ["AGO", 8],
+  ["AGOSTO", 8],
+  ["SEP", 9],
+  ["SEPT", 9],
+  ["SEPTIEMBRE", 9],
+  ["SETIEMBRE", 9],
+  ["OCT", 10],
+  ["OCTUBRE", 10],
+  ["NOV", 11],
+  ["NOVIEMBRE", 11],
+  ["DIC", 12],
+  ["DICIEMBRE", 12]
+]);
+
+const normalizeText = (value: string) =>
+  String(value ?? "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .trim()
+    .toUpperCase();
+
+const parseSpanishDate = (value: string) => {
+  const text = normalizeText(value);
+  const match = text.match(/(\d{1,2})[-/\s]+([A-Z]+|\d{1,2})[-/\s]+(\d{4})/);
+  if (!match) return null;
+  const month = /^\d+$/.test(match[2]) ? Number(match[2]) : monthNames.get(match[2]);
+  const year = Number(match[3]);
+  if (!month || month < 1 || month > 12 || !validYear(year)) return null;
+  const date = new Date(year, month - 1, Number(match[1]));
+  return Number.isNaN(date.getTime()) ? null : date;
+};
+
+const periodRange = (periodo: string): TemporalWindow | null => {
+  const matches = Array.from(String(periodo ?? "").matchAll(/\d{1,2}[-/\s]+(?:[A-Za-zÁÉÍÓÚÜÑáéíóúüñ]+|\d{1,2})[-/\s]+\d{4}/g));
+  const dates = matches.map((match) => parseSpanishDate(match[0])).filter((date): date is Date => Boolean(date));
+  if (dates.length >= 2) return { start: dates[0], end: new Date(dates[1].getFullYear(), dates[1].getMonth(), dates[1].getDate(), 23, 59, 59, 999) };
+  if (dates.length === 1) return { start: new Date(dates[0].getFullYear(), 0, 1), end: new Date(dates[0].getFullYear(), 11, 31, 23, 59, 59, 999) };
+  return null;
+};
+
+const logicalRange = (records: NormalizedRecord[]): TemporalWindow => {
+  const periodRanges = records.map((record) => periodRange(record.periodo)).filter((range): range is TemporalWindow => Boolean(range));
+  if (periodRanges.length) {
+    return {
+      start: new Date(Math.min(...periodRanges.map((range) => range.start.getTime()))),
+      end: new Date(Math.max(...periodRanges.map((range) => range.end.getTime())))
+    };
+  }
+  const periodYears = records.flatMap((record) => yearsFromText(record.periodo));
+  const anioYears = records.flatMap((record) => yearsFromText(record.anio));
+  const dateYears = records.flatMap((record) => [yearFromDate(record.ausInicio), yearFromDate(record.ausFin)]).filter((year): year is number => validYear(year));
+  const referenceYears = periodYears.length ? periodYears : anioYears.length ? anioYears : dateYears;
+  const minYear = referenceYears.length ? Math.min(...referenceYears) : new Date().getFullYear();
+  const maxYear = referenceYears.length ? Math.max(...referenceYears) : new Date().getFullYear();
+  return {
+    start: new Date(minYear, 0, 1, 0, 0, 0, 0),
+    end: new Date(maxYear, 11, 31, 23, 59, 59, 999)
+  };
 };
 
 const datasetOpenEndYear = (records: NormalizedRecord[]) => {
-  const years = records.flatMap((record) => [
-    yearFromDate(record.ausInicio),
-    yearFromText(record.anio),
-    yearFromText(record.periodo)
-  ]).filter((year): year is number => Number.isFinite(year));
-  return years.length ? Math.max(...years) : datasetMaxYear(records);
+  return logicalRange(records).end.getFullYear();
 };
 
 const recordFallbackYear = (record: NormalizedRecord) =>
-  yearFromDate(record.ausInicio) ?? yearFromDate(record.ausFin) ?? yearFromText(record.anio) ?? yearFromText(record.periodo);
+  yearsFromText(record.periodo)[0] ?? (validYear(yearFromText(record.anio)) ? yearFromText(record.anio) : null) ?? yearFromDate(record.ausInicio) ?? yearFromDate(record.ausFin);
 
 const monthKey = (date: Date) => `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
 
@@ -107,7 +177,8 @@ const overlapDays = (start: Date | null, end: Date | null, windows: TemporalWind
 const absenceOverlapsYear = (record: NormalizedRecord, year: number, maxOpenYear: number) => {
   const yearStart = new Date(year, 0, 1, 0, 0, 0, 0);
   const yearEnd = new Date(year, 11, 31, 23, 59, 59, 999);
-  const start = record.ausInicio ?? record.ausFin;
+  const fallbackYear = recordFallbackYear(record);
+  const start = record.ausInicio ?? (fallbackYear ? new Date(fallbackYear, 0, 1) : null) ?? record.ausFin;
   const end = record.ausFin ?? endFromDays(start, record.diasAusHastaFinP);
   if (start) return start <= yearEnd && (!end ? year <= maxOpenYear : end >= yearStart);
   return recordFallbackYear(record) === year;
@@ -131,7 +202,8 @@ const includesActiveMonth = (selected: string[], record: NormalizedRecord) => {
     })
     .filter((window): window is TemporalWindow => Boolean(window));
   if (!windows.length) return true;
-  const start = record.ausInicio ?? record.ausFin;
+  const fallbackYear = recordFallbackYear(record);
+  const start = record.ausInicio ?? (fallbackYear ? new Date(fallbackYear, 0, 1) : null) ?? record.ausFin;
   const end = record.ausFin ?? endFromDays(start, record.diasAusHastaFinP);
   return windows.some((window) => start && overlapWindow({ start, end: end ?? window.end }, window));
 };
@@ -176,7 +248,7 @@ const temporalWindows = (filters: FilterState) => {
 const adjustRecordToTemporalWindow = (record: NormalizedRecord, windows: TemporalWindow[]) => {
   const fallbackYear = recordFallbackYear(record);
   const fallbackStart = fallbackYear ? new Date(fallbackYear, 0, 1, 0, 0, 0, 0) : null;
-  const start = record.ausInicio ?? record.ausFin ?? fallbackStart;
+  const start = record.ausInicio ?? fallbackStart ?? record.ausFin;
   const effectiveAbsenceEnd = record.ausFin ?? endFromDays(start, record.diasAusHastaFinP);
   const absenceDays = overlapDays(start, effectiveAbsenceEnd, windows);
   const suplenciaStart = record.inicioSuplencia ?? (record.hasSuplente ? start : null);
@@ -204,6 +276,7 @@ const adjustRecordToTemporalWindow = (record: NormalizedRecord, windows: Tempora
 export const applyFilters = (records: NormalizedRecord[], filters: FilterState) => {
   const maxOpenYear = datasetOpenEndYear(records);
   const windows = temporalWindows(filters);
+  const dataRange = logicalRange(records);
   const minDias = parseNumberBound(filters.diasAusMin);
   const maxDias = parseNumberBound(filters.diasAusMax);
   const minCoste = parseNumberBound(filters.costeMin);
@@ -226,7 +299,7 @@ export const applyFilters = (records: NormalizedRecord[], filters: FilterState) 
       (filters.suplente === "all" || (filters.suplente === "yes" ? record.hasSuplente : !record.hasSuplente)) &&
       (filters.ausenciaAbierta === "all" || (filters.ausenciaAbierta === "yes" ? record.ausenciaAbierta : !record.ausenciaAbierta))
     );
-  }).map((record) => (windows ? adjustRecordToTemporalWindow(record, windows) : record))
+  }).map((record) => (windows ? adjustRecordToTemporalWindow(record, windows.map((window) => overlapWindow(window, dataRange)).filter((window): window is TemporalWindow => Boolean(window))) : record))
     .filter((record) =>
       (!windows || record.diasAusHastaFinP > 0) &&
       (minDias === null || record.diasAusHastaFinP >= minDias) &&
@@ -242,33 +315,21 @@ export const getOptions = (records: NormalizedRecord[], field: keyof NormalizedR
   );
 
 export const getActiveYearOptions = (records: NormalizedRecord[]) => {
-  const maxOpenYear = datasetOpenEndYear(records);
+  const range = logicalRange(records);
   const years = new Set<string>();
-  records.forEach((record) => {
-    const startYear = recordFallbackYear(record);
-    const start = record.ausInicio ?? record.ausFin ?? (startYear ? new Date(startYear, 0, 1) : null);
-    const endYear = yearFromDate(record.ausFin ?? endFromDays(start, record.diasAusHastaFinP)) ?? maxOpenYear;
-    if (!startYear) return;
-    for (let year = startYear; year <= endYear; year += 1) years.add(String(year));
-  });
+  for (let year = range.start.getFullYear(); year <= range.end.getFullYear(); year += 1) years.add(String(year));
   return Array.from(years).sort((a, b) => Number(a) - Number(b));
 };
 
 export const getActiveMonthOptions = (records: NormalizedRecord[]) => {
-  const maxOpenYear = datasetOpenEndYear(records);
+  const range = logicalRange(records);
   const months = new Set<string>();
-  records.forEach((record) => {
-    const startYear = recordFallbackYear(record);
-    const start = record.ausInicio ?? (startYear ? new Date(startYear, 0, 1) : null);
-    const end = record.ausFin ?? endFromDays(start, record.diasAusHastaFinP) ?? new Date(maxOpenYear, 11, 31);
-    if (!start) return;
-    const cursor = new Date(start.getFullYear(), start.getMonth(), 1);
-    const endCursor = new Date(end.getFullYear(), end.getMonth(), 1);
-    while (cursor <= endCursor) {
-      months.add(monthKey(cursor));
-      cursor.setMonth(cursor.getMonth() + 1);
-    }
-  });
+  const cursor = new Date(range.start.getFullYear(), range.start.getMonth(), 1);
+  const endCursor = new Date(range.end.getFullYear(), range.end.getMonth(), 1);
+  while (cursor <= endCursor) {
+    months.add(monthKey(cursor));
+    cursor.setMonth(cursor.getMonth() + 1);
+  }
   return Array.from(months).sort((a, b) => a.localeCompare(b));
 };
 
