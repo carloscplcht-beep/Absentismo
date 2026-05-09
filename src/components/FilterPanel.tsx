@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Download, FilterX, SlidersHorizontal } from "lucide-react";
 import type { FilterState, NormalizedRecord } from "../types/data";
-import { emptyFilters, getActiveYearOptions, getOptions } from "../utils/aggregations";
+import { emptyFilters, getActiveMonthOptions, getActiveYearOptions, getOptions } from "../utils/aggregations";
 
 type FilterPanelProps = {
   records: NormalizedRecord[];
@@ -13,6 +13,7 @@ type FilterPanelProps = {
 
 const fieldLabels: Array<[keyof FilterState, keyof NormalizedRecord, string]> = [
   ["anio", "anio", "Año"],
+  ["mesAusencia", "anio", "Mes en vigor"],
   ["ambito", "ambito", "Ámbito"],
   ["gerencia", "gerencia", "Gerencia"],
   ["categoriaCentralizada", "categoriaCentralizada", "Categoría centralizada"],
@@ -68,7 +69,7 @@ export function FilterPanel({ records, filters, onApply, onClear, onExport }: Fi
   const options = useMemo(
     () => Object.fromEntries(fieldLabels.map(([filterKey, recordKey]) => [
       filterKey,
-      filterKey === "anio" ? getActiveYearOptions(records) : getOptions(records, recordKey)
+      filterKey === "anio" ? getActiveYearOptions(records) : filterKey === "mesAusencia" ? getActiveMonthOptions(records) : getOptions(records, recordKey)
     ])),
     [records]
   ) as Record<string, string[]>;
@@ -129,11 +130,11 @@ export function FilterPanel({ records, filters, onApply, onClear, onExport }: Fi
             </select>
           </label>
           <label className="field">
-            <span>Inicio ausencia desde</span>
+            <span>Periodo en vigor desde</span>
             <input type="date" value={draft.fechaInicioDesde} onChange={(event) => setDraft((current) => ({ ...current, fechaInicioDesde: event.target.value }))} />
           </label>
           <label className="field">
-            <span>Inicio ausencia hasta</span>
+            <span>Periodo en vigor hasta</span>
             <input type="date" value={draft.fechaInicioHasta} onChange={(event) => setDraft((current) => ({ ...current, fechaInicioHasta: event.target.value }))} />
           </label>
           <label className="field">

@@ -99,6 +99,7 @@ export type ParsedWorkbook = {
 
 export type FilterState = {
   anio: string[];
+  mesAusencia: string[];
   ambito: string[];
   gerencia: string[];
   categoriaCentralizada: string[];
