@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Download, FilterX, SlidersHorizontal } from "lucide-react";
 import type { FilterState, NormalizedRecord } from "../types/data";
-import { emptyFilters, getOptions } from "../utils/aggregations";
+import { emptyFilters, getActiveYearOptions, getOptions } from "../utils/aggregations";
 
 type FilterPanelProps = {
   records: NormalizedRecord[];
@@ -66,7 +66,10 @@ export function FilterPanel({ records, filters, onApply, onClear, onExport }: Fi
     setDraft(filters);
   }, [filters, records]);
   const options = useMemo(
-    () => Object.fromEntries(fieldLabels.map(([filterKey, recordKey]) => [filterKey, getOptions(records, recordKey)])),
+    () => Object.fromEntries(fieldLabels.map(([filterKey, recordKey]) => [
+      filterKey,
+      filterKey === "anio" ? getActiveYearOptions(records) : getOptions(records, recordKey)
+    ])),
     [records]
   ) as Record<string, string[]>;
 
@@ -100,7 +103,7 @@ export function FilterPanel({ records, filters, onApply, onClear, onExport }: Fi
           {fieldLabels.map(([filterKey, , label]) => (
             <MultiSelect
               key={filterKey}
-              label={label}
+              label={filterKey === "anio" ? "Año en vigor" : label}
               value={draft[filterKey] as string[]}
               options={options[filterKey] ?? []}
               onChange={(value) => setDraft((current) => ({ ...current, [filterKey]: value }))}

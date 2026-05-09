@@ -26,6 +26,55 @@ export const emptyFilters: FilterState = {
 
 const includes = (selected: string[], value: string) => !selected.length || selected.includes(value || "Sin datos");
 
+const yearFromText = (value: string) => {
+  const match = String(value ?? "").match(/\d{4}/);
+  return match ? Number(match[0]) : null;
+};
+
+const yearFromDate = (value: Date | null | undefined) => {
+  if (!value || Number.isNaN(value.getTime())) return null;
+  return value.getFullYear();
+};
+
+const datasetMaxYear = (records: NormalizedRecord[]) => {
+  const years = records.flatMap((record) => [
+    yearFromDate(record.ausInicio),
+    yearFromDate(record.ausFin),
+    yearFromText(record.anio),
+    yearFromText(record.periodo)
+  ]).filter((year): year is number => Number.isFinite(year));
+  return years.length ? Math.max(...years) : new Date().getFullYear();
+};
+
+const datasetOpenEndYear = (records: NormalizedRecord[]) => {
+  const years = records.flatMap((record) => [
+    yearFromDate(record.ausInicio),
+    yearFromText(record.anio),
+    yearFromText(record.periodo)
+  ]).filter((year): year is number => Number.isFinite(year));
+  return years.length ? Math.max(...years) : datasetMaxYear(records);
+};
+
+const recordFallbackYear = (record: NormalizedRecord) =>
+  yearFromDate(record.ausInicio) ?? yearFromDate(record.ausFin) ?? yearFromText(record.anio) ?? yearFromText(record.periodo);
+
+const absenceOverlapsYear = (record: NormalizedRecord, year: number, maxOpenYear: number) => {
+  const yearStart = new Date(year, 0, 1, 0, 0, 0, 0);
+  const yearEnd = new Date(year, 11, 31, 23, 59, 59, 999);
+  const start = record.ausInicio ?? record.ausFin;
+  const end = record.ausFin;
+  if (start) return start <= yearEnd && (!end ? year <= maxOpenYear : end >= yearStart);
+  return recordFallbackYear(record) === year;
+};
+
+const includesActiveYear = (selected: string[], record: NormalizedRecord, maxOpenYear: number) => {
+  if (!selected.length) return true;
+  return selected.some((value) => {
+    const year = Number(value);
+    return Number.isFinite(year) ? absenceOverlapsYear(record, year, maxOpenYear) : includes([value], record.anio);
+  });
+};
+
 const parseNumberBound = (value: string) => {
   if (!value.trim()) return null;
   const parsed = Number(value);
@@ -39,8 +88,9 @@ const parseDateBound = (value: string, endOfDay = false) => {
   return new Date(year, month - 1, day, endOfDay ? 23 : 0, endOfDay ? 59 : 0, endOfDay ? 59 : 0, endOfDay ? 999 : 0);
 };
 
-export const applyFilters = (records: NormalizedRecord[], filters: FilterState) =>
-  records.filter((record) => {
+export const applyFilters = (records: NormalizedRecord[], filters: FilterState) => {
+  const maxOpenYear = datasetOpenEndYear(records);
+  return records.filter((record) => {
     const from = parseDateBound(filters.fechaInicioDesde);
     const to = parseDateBound(filters.fechaInicioHasta, true);
     const minDias = parseNumberBound(filters.diasAusMin);
@@ -48,7 +98,7 @@ export const applyFilters = (records: NormalizedRecord[], filters: FilterState) 
     const minCoste = parseNumberBound(filters.costeMin);
     const maxCoste = parseNumberBound(filters.costeMax);
     return (
-      includes(filters.anio, record.anio) &&
+      includesActiveYear(filters.anio, record, maxOpenYear) &&
       includes(filters.ambito, record.ambito) &&
       includes(filters.gerencia, record.gerencia) &&
       includes(filters.categoriaCentralizada, record.categoriaCentralizada) &&
@@ -70,11 +120,24 @@ export const applyFilters = (records: NormalizedRecord[], filters: FilterState) 
       (maxCoste === null || record.totalNomina <= maxCoste)
     );
   });
+};
 
 export const getOptions = (records: NormalizedRecord[], field: keyof NormalizedRecord) =>
   Array.from(new Set(records.map((record) => String(record[field] ?? "Sin datos")).filter(Boolean))).sort((a, b) =>
     a.localeCompare(b, "es")
   );
+
+export const getActiveYearOptions = (records: NormalizedRecord[]) => {
+  const maxOpenYear = datasetOpenEndYear(records);
+  const years = new Set<string>();
+  records.forEach((record) => {
+    const startYear = recordFallbackYear(record);
+    const endYear = yearFromDate(record.ausFin) ?? maxOpenYear;
+    if (!startYear) return;
+    for (let year = startYear; year <= endYear; year += 1) years.add(String(year));
+  });
+  return Array.from(years).sort((a, b) => Number(a) - Number(b));
+};
 
 export const aggregateBy = (
   records: NormalizedRecord[],
